@@ -1,4 +1,4 @@
-![Aircraft Dashboard Banner](assets/Gemini_Generated_Image_vvm30uvvm30uvvm3.png)
+![Aircraft Dashboard Banner](assets/hero-banner.png)
 
 # ✈️ Interactive 3D Military Aircraft Comparison Dashboard
 
