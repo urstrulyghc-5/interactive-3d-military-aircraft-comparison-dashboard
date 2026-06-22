@@ -1,3 +1,5 @@
+![Aircraft Dashboard Banner](assets/Gemini_Generated_Image_vvm30uvvm30uvvm3.png)
+
 # ✈️ Interactive 3D Military Aircraft Comparison Dashboard
 
 Executive Aerospace Intelligence Dashboard comparing some of the world's most iconic military aircraft through interactive visualizations, benchmarking analytics, and strategic performance assessment.
