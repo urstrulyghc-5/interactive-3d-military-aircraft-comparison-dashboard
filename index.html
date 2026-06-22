@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Aircraft Comparison Dashboard 2026</title>
+<style>
+/* ═══════════════════════════════════════════
+   RESET & ROOT
+═══════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg0:#060810;--bg1:#090c14;--bg2:#0d1220;--bg3:#111828;
+  --border:#1a2540;--border2:#223050;
+  --text1:#e8f0ff;--text2:#8aa4cc;--text3:#4a6080;
+  --accent:#00c8ff;--accent2:#7c5cfc;--accent3:#ff6b6b;
+  --gold:#f0a030;--green:#00e88a;
+  --font-display:'Courier New',monospace;
+  --font-body:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --radius:6px;--radius-lg:12px;
+  --transition:all .25s cubic-bezier(.4,0,.2,1);
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg0);color:var(--text1);font-family:var(--font-body);min-height:100vh;overflow-x:hidden}
+
+/* ═══════════════════════════════════════════
+   SCANLINE OVERLAY
+═══════════════════════════════════════════ */
+body::before{
+  content:'';position:fixed;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,200,255,.012) 2px,rgba(0,200,255,.012) 4px);
+  pointer-events:none;z-index:9999
+}
+
+/* ═══════════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════════ */
+.shell{display:grid;grid-template-columns:240px 1fr;grid-template-rows:56px 1fr;min-height:100vh}
+
+/* ── TOP NAVBAR ── */
+.navbar{
+  grid-column:1/-1;background:var(--bg1);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 20px;gap:16px;position:sticky;top:0;z-index:100
+}
+.navbar-brand{font-family:var(--font-display);font-size:13px;letter-spacing:.2em;color:var(--accent);text-transform:uppercase;white-space:nowrap}
+.navbar-brand span{color:var(--text3)}
+.nav-sep{width:1px;height:20px;background:var(--border);margin:0 4px}
+.nav-tabs{display:flex;gap:2px;flex:1;overflow-x:auto}
+.nav-tab{
+  display:flex;align-items:center;gap:6px;padding:6px 14px;
+  border:none;background:transparent;color:var(--text3);
+  font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  cursor:pointer;border-radius:var(--radius);transition:var(--transition);
+  white-space:nowrap;font-family:var(--font-body)
+}
+.nav-tab:hover{background:var(--bg3);color:var(--text2)}
+.nav-tab.active{background:rgba(0,200,255,.1);color:var(--accent);border-bottom:2px solid var(--accent)}
+.nav-tab svg{width:14px;height:14px;flex-shrink:0}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:livepulse 2s ease-in-out infinite;margin-left:auto}
+@keyframes livepulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.9)}}
+.nav-date{font-size:10px;color:var(--text3);letter-spacing:.08em;white-space:nowrap}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  background:var(--bg1);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow-y:auto;
+  position:sticky;top:56px;height:calc(100vh - 56px)
+}
+.sidebar-hd{padding:14px 16px 10px;font-size:9px;letter-spacing:.18em;color:var(--text3);text-transform:uppercase;border-bottom:1px solid var(--border)}
+.ac-list{padding:8px}
+.ac-item{
+  display:flex;align-items:center;gap:10px;padding:9px 10px;
+  cursor:pointer;border-radius:var(--radius);transition:var(--transition);
+  border:1px solid transparent;margin-bottom:2px
+}
+.ac-item:hover{background:var(--bg3)}
+.ac-item.active{background:rgba(0,200,255,.08);border-color:rgba(0,200,255,.2)}
+.ac-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.ac-info{flex:1;min-width:0}
+.ac-name{font-size:12px;font-weight:500;color:var(--text1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ac-item.active .ac-name{color:var(--accent)}
+.ac-sub{font-size:10px;color:var(--text3);margin-top:1px}
+.ac-gen{font-size:9px;padding:1px 5px;border-radius:2px;background:var(--bg3);color:var(--text3);letter-spacing:.06em;flex-shrink:0}
+.ac-item.active .ac-gen{background:rgba(0,200,255,.15);color:var(--accent)}
+
+/* Compare checkboxes */
+.compare-bar{padding:10px 16px;border-top:1px solid var(--border);margin-top:auto}
+.compare-bar-title{font-size:9px;letter-spacing:.14em;color:var(--text3);text-transform:uppercase;margin-bottom:8px}
+.cmp-row{display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer}
+.cmp-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.cmp-label{font-size:11px;color:var(--text2);flex:1}
+.cmp-check{width:14px;height:14px;border:1px solid var(--border2);border-radius:2px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:var(--transition)}
+.cmp-check.on{border-color:var(--accent);background:rgba(0,200,255,.15)}
+.cmp-check.on::after{content:'✓';font-size:9px;color:var(--accent)}
+.compare-action-btn{
+  width:100%;margin-top:10px;padding:8px;
+  background:linear-gradient(135deg,rgba(0,200,255,.2),rgba(124,92,252,.2));
+  border:1px solid var(--border2);border-radius:var(--radius);
+  color:var(--accent);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  cursor:pointer;transition:var(--transition);font-family:var(--font-body)
+}
+.compare-action-btn:hover{background:linear-gradient(135deg,rgba(0,200,255,.3),rgba(124,92,252,.3));border-color:var(--accent)}
+
+/* ── MAIN ── */
+.main{background:var(--bg0);overflow-y:auto;min-height:0}
+.section-panel{display:none;padding:24px}
+.section-panel.active{display:block}
+
+/* ═══════════════════════════════════════════
+   COMMON COMPONENTS
+═══════════════════════════════════════════ */
+.panel-header{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+.panel-header h1{font-size:18px;font-weight:500;color:var(--text1)}
+.panel-header .badge{font-size:9px;padding:2px 8px;border-radius:2px;background:rgba(0,200,255,.12);color:var(--accent);letter-spacing:.1em;text-transform:uppercase}
+.panel-header .sub{font-size:12px;color:var(--text3);margin-left:auto}
+
+.card{background:var(--bg1);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px}
+.card-title{font-size:10px;letter-spacing:.12em;color:var(--text3);text-transform:uppercase;margin-bottom:12px}
+
+.metric-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:20px}
+.metric{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px}
+.metric-label{font-size:9px;letter-spacing:.12em;color:var(--text3);text-transform:uppercase;margin-bottom:4px}
+.metric-val{font-size:22px;font-weight:500;font-variant-numeric:tabular-nums;transition:color .3s}
+.metric-unit{font-size:11px;color:var(--text3);margin-left:3px}
+.metric-bar{height:2px;background:var(--bg3);border-radius:1px;margin-top:8px;overflow:hidden}
+.metric-bar-fill{height:2px;border-radius:1px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+
+/* Stat bar rows */
+.stat-row{display:grid;grid-template-columns:130px 1fr 60px;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(26,37,64,.6)}
+.stat-row:last-child{border-bottom:none}
+.stat-lbl{font-size:11px;color:var(--text2)}
+.stat-track{height:5px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.stat-fill{height:5px;border-radius:3px;transition:width .7s cubic-bezier(.4,0,.2,1)}
+.stat-val{font-size:11px;font-weight:500;font-variant-numeric:tabular-nums;text-align:right}
+
+/* Tag / pill */
+.tag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:3px;font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+.tag-cyan{background:rgba(0,200,255,.1);color:var(--accent);border:1px solid rgba(0,200,255,.2)}
+.tag-purple{background:rgba(124,92,252,.1);color:#a080ff;border:1px solid rgba(124,92,252,.2)}
+.tag-gold{background:rgba(240,160,48,.1);color:var(--gold);border:1px solid rgba(240,160,48,.2)}
+.tag-green{background:rgba(0,232,138,.1);color:var(--green);border:1px solid rgba(0,232,138,.2)}
+.tag-red{background:rgba(255,107,107,.1);color:var(--accent3);border:1px solid rgba(255,107,107,.2)}
+.tags-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px}
+
+/* ═══════════════════════════════════════════
+   SECTION: OVERVIEW (3D Radar)
+═══════════════════════════════════════════ */
+.overview-grid{display:grid;grid-template-columns:1fr 340px;gap:16px}
+.canvas-card{position:relative;background:var(--bg1);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;height:440px}
+#three-canvas{width:100%;height:100%;display:block}
+.canvas-hud{position:absolute;inset:0;pointer-events:none}
+.hud-corner{position:absolute;width:18px;height:18px;border-color:rgba(0,200,255,.4)}
+.hud-corner.tl{top:10px;left:10px;border-top:1px solid;border-left:1px solid}
+.hud-corner.tr{top:10px;right:10px;border-top:1px solid;border-right:1px solid}
+.hud-corner.bl{bottom:10px;left:10px;border-bottom:1px solid;border-left:1px solid}
+.hud-corner.br{bottom:10px;right:10px;border-bottom:1px solid;border-right:1px solid}
+.hud-title{position:absolute;top:12px;left:50%;transform:translateX(-50%);font-size:10px;letter-spacing:.15em;color:rgba(0,200,255,.5);text-transform:uppercase;white-space:nowrap}
+.hud-mach{position:absolute;top:12px;right:14px;text-align:right}
+.hud-mach .big{font-size:22px;font-weight:500;font-variant-numeric:tabular-nums}
+.hud-mach .sm{font-size:9px;letter-spacing:.1em;color:var(--text3);text-transform:uppercase}
+.hud-ceil{position:absolute;bottom:24px;right:14px;text-align:right}
+.hud-ceil .big{font-size:14px;font-weight:500;color:var(--gold)}
+.hud-ceil .sm{font-size:9px;letter-spacing:.1em;color:rgba(240,160,48,.5);text-transform:uppercase}
+.hud-drag{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--text3);letter-spacing:.08em;white-space:nowrap}
+.hud-rcs{position:absolute;top:12px;left:14px;text-align:left}
+.hud-rcs .big{font-size:14px;font-weight:500;color:var(--green)}
+.hud-rcs .sm{font-size:9px;letter-spacing:.1em;color:rgba(0,232,138,.5);text-transform:uppercase}
+
+.overview-right{display:flex;flex-direction:column;gap:14px}
+.radar-card{background:var(--bg1);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;flex:1}
+.radar-card .card-title{margin-bottom:8px}
+.radar-wrap{display:flex;justify-content:center;align-items:center;flex:1}
+.info-card{background:var(--bg1);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px}
+.info-ac-name{font-size:16px;font-weight:500;margin-bottom:2px}
+.info-ac-maker{font-size:11px;color:var(--text3);margin-bottom:8px}
+.info-desc{font-size:11px;color:var(--text2);line-height:1.6}
+
+/* ═══════════════════════════════════════════
+   SECTION: PERFORMANCE
+═══════════════════════════════════════════ */
+.perf-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.perf-chart-card{grid-column:1/-1;background:var(--bg1);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px}
+.bar-chart{display:flex;flex-direction:column;gap:14px;margin-top:10px}
+.bc-row{display:grid;grid-template-columns:130px 1fr 80px;align-items:center;gap:12px}
+.bc-label{font-size:12px;color:var(--text2)}
+.bc-track{height:10px;background:var(--bg3);border-radius:5px;overflow:hidden;position:relative}
+.bc-fill{height:10px;border-radius:5px;transition:width .8s cubic-bezier(.4,0,.2,1);position:relative}
+.bc-fill::after{content:'';position:absolute;right:0;top:-3px;width:3px;height:16px;background:inherit;border-radius:2px;opacity:.6}
+.bc-val{font-size:12px;font-weight:500;font-variant-numeric:tabular-nums;text-align:right}
+
+/* Speed gauge */
+.gauge-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px}
+.gauge-val{font-size:36px;font-weight:500;font-variant-numeric:tabular-nums;text-align:center;margin-top:8px}
+.gauge-lbl{font-size:10px;letter-spacing:.12em;color:var(--text3);text-transform:uppercase;text-align:center}
+
+/* ═══════════════════════════════════════════
+   SECTION: FEATURES
+═══════════════════════════════════════════ */
+.feat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.feat-card{background:var(--bg1);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;transition:var(--transition)}
+.feat-card:hover{border-color:var(--border2);transform:translateY(-2px)}
+.feat-icon{width:36px;height:36px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:12px}
+.feat-title{font-size:13px;font-weight:500;color:var(--text1);margin-bottom:6px}
+.feat-body{font-size:11px;color:var(--text2);line-height:1.6}
+.feat-score{margin-top:10px;display:flex;align-items:center;gap:8px}
+.feat-score-bar{flex:1;height:3px;background:var(--bg3);border-radius:2px}
+.feat-score-fill{height:3px;border-radius:2px}
+.feat-score-val{font-size:10px;font-weight:500;font-variant-numeric:tabular-nums;min-width:28px;text-align:right}
+
+/* Feature matrix table */
+.feat-matrix{width:100%;border-collapse:collapse;font-size:11px;margin-top:14px}
+.feat-matrix th{padding:8px 12px;text-align:left;font-size:9px;letter-spacing:.12em;color:var(--text3);text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--bg2)}
+.feat-matrix td{padding:9px 12px;border-bottom:1px solid rgba(26,37,64,.5);color:var(--text2)}
+.feat-matrix tr:hover td{background:rgba(13,18,32,.5)}
+.feat-matrix .check{color:var(--green);font-size:13px}
+.feat-matrix .cross{color:var(--text3)}
+.feat-matrix .partial{color:var(--gold)}
+
+/* ═══════════════════════════════════════════
+   SECTION: USE PURPOSE
+═══════════════════════════════════════════ */
+.use-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.use-card{background:var(--bg1);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;position:relative;overflow:hidden}
+.use-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.use-card.role-bomber::before{background:linear-gradient(90deg,#e8a830,transparent)}
+.use-card.role-fighter::before{background:linear-gradient(90deg,#00e88a,transparent)}
+.use-card.role-recon::before{background:linear-gradient(90deg,#aa80ff,transparent)}
+.use-card.role-multi::before{background:linear-gradient(90deg,#00c8ff,transparent)}
+.use-card.role-strike::before{background:linear-gradient(90deg,#ff6b6b,transparent)}
+.use-role{font-size:9px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:8px}
+.use-name{font-size:15px;font-weight:500;color:var(--text1);margin-bottom:4px}
+.use-maker{font-size:10px;color:var(--text3);margin-bottom:12px}
+.use-missions{display:flex;flex-direction:column;gap:5px}
+.use-mission{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2)}
+.use-mission-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.use-theater{margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
+.use-theater-title{font-size:9px;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:5px}
+.use-theater-val{font-size:12px;color:var(--text2);line-height:1.5}
+
+/* ═══════════════════════════════════════════
+   SECTION: PRICING
+═══════════════════════════════════════════ */
+.price-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.price-card{background:var(--bg1);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;position:relative;transition:var(--transition)}
+.price-card:hover{border-color:var(--border2)}
+.price-card.featured{border-color:rgba(0,200,255,.35);box-shadow:0 0 24px rgba(0,200,255,.06)}
+.price-badge{position:absolute;top:-1px;left:50%;transform:translateX(-50%);font-size:9px;padding:2px 10px;background:rgba(0,200,255,.2);color:var(--accent);border:1px solid rgba(0,200,255,.3);border-top:none;border-radius:0 0 4px 4px;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+.price-ac-name{font-size:14px;font-weight:500;color:var(--text1);margin-bottom:2px}
+.price-ac-sub{font-size:10px;color:var(--text3);margin-bottom:14px}
+.price-big{font-size:28px;font-weight:500;font-variant-numeric:tabular-nums;line-height:1;margin-bottom:4px}
+.price-note{font-size:10px;color:var(--text3);margin-bottom:16px;line-height:1.4}
+.price-items{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--border);padding-top:14px}
+.price-item{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text2)}
+.price-item::before{content:'—';color:var(--text3);flex-shrink:0}
+.price-disclaimer{margin-top:16px;padding:12px 16px;background:rgba(240,160,48,.06);border:1px solid rgba(240,160,48,.15);border-radius:var(--radius);font-size:10px;color:rgba(240,160,48,.7);line-height:1.6}
+
+/* ═══════════════════════════════════════════
+   SECTION: CUSTOM
+═══════════════════════════════════════════ */
+.custom-grid{display:grid;grid-template-columns:1fr 320px;gap:16px}
+.custom-controls{display:flex;flex-direction:column;gap:12px}
+.custom-card{background:var(--bg1);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px}
+.slider-row{margin-bottom:14px}
+.slider-label{display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:6px}
+.slider-label span{color:var(--accent);font-weight:500;font-variant-numeric:tabular-nums}
+input[type=range]{
+  width:100%;-webkit-appearance:none;height:4px;border-radius:2px;
+  background:linear-gradient(to right, var(--accent) var(--pct,50%), var(--bg3) var(--pct,50%));
+  outline:none;cursor:pointer
+}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px rgba(0,200,255,.4);transition:transform .15s}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2)}
+.custom-result{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-top:4px}
+.custom-score-big{font-size:48px;font-weight:500;font-variant-numeric:tabular-nums;text-align:center;line-height:1;margin-bottom:4px}
+.custom-score-label{font-size:10px;letter-spacing:.12em;color:var(--text3);text-transform:uppercase;text-align:center;margin-bottom:12px}
+.custom-winner{font-size:13px;color:var(--text1);text-align:center;font-weight:500}
+.custom-winner-sub{font-size:10px;color:var(--text3);text-align:center;margin-top:3px}
+.custom-rank-list{display:flex;flex-direction:column;gap:6px;margin-top:14px}
+.rank-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius);background:var(--bg3)}
+.rank-num{font-size:11px;color:var(--text3);min-width:16px}
+.rank-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.rank-name{font-size:12px;color:var(--text2);flex:1}
+.rank-score{font-size:12px;font-weight:500;font-variant-numeric:tabular-nums}
+.rank-bar-wrap{flex:1;height:4px;background:var(--bg2);border-radius:2px}
+.rank-bar{height:4px;border-radius:2px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+
+/* ═══════════════════════════════════════════
+   SECTION: COMPARE
+═══════════════════════════════════════════ */
+.compare-header-row{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.compare-header-row h2{font-size:15px;font-weight:500;color:var(--text1)}
+.compare-header-row .hint{font-size:11px;color:var(--text3)}
+#compare-table-wrap{overflow-x:auto}
+.compare-table{width:100%;border-collapse:collapse;font-size:12px;min-width:600px}
+.compare-table th{padding:10px 14px;text-align:left;font-size:9px;letter-spacing:.12em;color:var(--text3);text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--bg2);white-space:nowrap}
+.compare-table th.ac-col{text-align:center;font-size:11px;letter-spacing:0;padding:12px 10px;white-space:nowrap}
+.compare-table th.ac-col .dot-name{display:flex;flex-direction:column;align-items:center;gap:3px}
+.compare-table th.ac-col .dot-name .dot{width:8px;height:8px;border-radius:50%}
+.compare-table td{padding:9px 14px;border-bottom:1px solid rgba(26,37,64,.4);color:var(--text2)}
+.compare-table td.metric-cell{color:var(--text3);font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+.compare-table td.val-cell{text-align:center;font-variant-numeric:tabular-nums;font-weight:500}
+.compare-table tr:hover td{background:rgba(13,18,32,.4)}
+.compare-table .winner-cell{color:var(--green);position:relative}
+.compare-table .winner-cell::after{content:'★';font-size:8px;position:absolute;top:6px;right:6px;color:var(--green);opacity:.6}
+.compare-table .section-row td{background:var(--bg2);font-size:9px;letter-spacing:.14em;color:var(--text3);text-transform:uppercase;padding:6px 14px;border-top:1px solid var(--border)}
+.no-compare-msg{text-align:center;padding:48px;color:var(--text3);font-size:13px}
+
+/* ═══════════════════════════════════════════
+   ANIMATIONS & MISC
+═══════════════════════════════════════════ */
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.section-panel.active{animation:fadeIn .3s ease}
+@media(max-width:900px){
+  .shell{grid-template-columns:1fr;grid-template-rows:56px auto 1fr}
+  .sidebar{position:relative;height:auto;flex-direction:row;flex-wrap:wrap;gap:0}
+  .ac-list{display:flex;flex-wrap:wrap;gap:4px;padding:6px}
+  .ac-item{padding:5px 8px}
+  .compare-bar{border-top:none;border-left:1px solid var(--border);min-width:200px}
+  .overview-grid,.perf-grid,.use-grid,.custom-grid{grid-template-columns:1fr}
+  .price-grid,.feat-grid{grid-template-columns:1fr}
+  .perf-chart-card{grid-column:1}
+}
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ══════════ NAVBAR ══════════ -->
+  <nav class="navbar">
+    <div class="navbar-brand">SKIES<span>/</span>2026</div>
+    <div class="nav-sep"></div>
+    <div class="nav-tabs" id="nav-tabs">
+      <button class="nav-tab active" data-tab="overview" onclick="switchTab('overview')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 2v6l4 2"/></svg>
+        Overview
+      </button>
+      <button class="nav-tab" data-tab="performance" onclick="switchTab('performance')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12L6 7l3 3 5-6"/></svg>
+        Performance
+      </button>
+      <button class="nav-tab" data-tab="features" onclick="switchTab('features')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+        Features
+      </button>
+      <button class="nav-tab" data-tab="purpose" onclick="switchTab('purpose')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2L10 6l4 .6-2.9 2.8.7 4L8 11.1 4.2 13.4l.7-4L2 6.6 6 6z"/></svg>
+        Use Purpose
+      </button>
+      <button class="nav-tab" data-tab="pricing" onclick="switchTab('pricing')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v2M8 12v2M3.3 4.3l1.4 1.4M11.3 10.3l1.4 1.4M2 8h2M12 8h2M4.3 11.7l1.4-1.4M10.3 5.7l1.4-1.4"/><circle cx="8" cy="8" r="2.5"/></svg>
+        Pricing
+      </button>
+      <button class="nav-tab" data-tab="custom" onclick="switchTab('custom')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l2 2-9 9-2 1 1-2z"/><path d="M10 4l2 2"/></svg>
+        Custom
+      </button>
+      <button class="nav-tab" data-tab="compare" onclick="switchTab('compare')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 2v12M11 2v12M2 5l3-3 3 3M8 11l3 3 3-3"/></svg>
+        Compare
+      </button>
+    </div>
+    <div class="live-dot" title="Live data feed"></div>
+    <div class="nav-date" id="live-date"></div>
+  </nav>
+
+  <!-- ══════════ SIDEBAR ══════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-hd">Select Aircraft</div>
+    <div class="ac-list" id="ac-list"></div>
+
+    <div class="compare-bar">
+      <div class="compare-bar-title">Compare (click to toggle)</div>
+      <div id="cmp-list"></div>
+      <button class="compare-action-btn" onclick="switchTab('compare')">▶ Run Comparison</button>
+    </div>
+  </aside>
+
+  <!-- ══════════ MAIN ══════════ -->
+  <main class="main">
+
+    <!-- ── OVERVIEW ── -->
+    <div class="section-panel active" id="tab-overview">
+      <div class="panel-header">
+        <h1 id="ov-title">B-2 Spirit</h1>
+        <div class="badge" id="ov-badge">5th Gen</div>
+        <div class="sub" id="ov-year">IOC 1997</div>
+      </div>
+      <div class="metric-row" id="ov-metrics"></div>
+      <div class="overview-grid">
+        <div class="canvas-card">
+          <canvas id="three-canvas"></canvas>
+          <div class="canvas-hud">
+            <div class="hud-corner tl"></div><div class="hud-corner tr"></div>
+            <div class="hud-corner bl"></div><div class="hud-corner br"></div>
+            <div class="hud-title" id="hud-title">B-2 SPIRIT</div>
+            <div class="hud-mach"><div class="big" id="hud-mach" style="color:var(--accent)">0.95</div><div class="sm">Mach</div></div>
+            <div class="hud-rcs"><div class="big" id="hud-rcs">0.001</div><div class="sm">RCS m²</div></div>
+            <div class="hud-ceil"><div class="big" id="hud-ceil">50,000</div><div class="sm">ft ceiling</div></div>
+            <div class="hud-drag">drag to orbit · scroll to zoom</div>
+          </div>
+        </div>
+        <div class="overview-right">
+          <div class="radar-card">
+            <div class="card-title">Capability Radar — Live</div>
+            <div class="radar-wrap"><svg id="radar-svg" width="240" height="240" viewBox="0 0 240 240" role="img" aria-label="Radar chart of aircraft capability metrics"></svg></div>
+          </div>
+          <div class="info-card">
+            <div class="info-ac-name" id="info-name">B-2 Spirit</div>
+            <div class="info-ac-maker" id="info-maker">Northrop Grumman · 1997</div>
+            <div class="tags-row" id="info-tags"></div>
+            <div class="info-desc" id="info-desc"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PERFORMANCE ── -->
+    <div class="section-panel" id="tab-performance">
+      <div class="panel-header"><h1>Performance</h1><div class="badge">Live Metrics</div></div>
+      <div class="metric-row" id="perf-metrics"></div>
+      <div class="perf-grid">
+        <div class="perf-chart-card">
+          <div class="card-title" id="perf-chart-title">Speed Comparison — All Aircraft (Mach)</div>
+          <div class="bar-chart" id="perf-speed-chart"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Altitude Ceiling (ft)</div>
+          <div class="bar-chart" id="perf-ceil-chart"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Combat Range (nm)</div>
+          <div class="bar-chart" id="perf-range-chart"></div>
+        </div>
+        <div class="card" style="grid-column:1/-1">
+          <div class="card-title">Payload Capacity (lbs)</div>
+          <div class="bar-chart" id="perf-payload-chart"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── FEATURES ── -->
+    <div class="section-panel" id="tab-features">
+      <div class="panel-header"><h1>Features</h1><div class="badge">Systems</div></div>
+      <div class="feat-grid" id="feat-cards"></div>
+      <div class="card" style="margin-top:14px">
+        <div class="card-title">Feature Matrix — All Aircraft</div>
+        <table class="feat-matrix" id="feat-matrix"></table>
+      </div>
+    </div>
+
+    <!-- ── USE PURPOSE ── -->
+    <div class="section-panel" id="tab-purpose">
+      <div class="panel-header"><h1>Use Purpose</h1><div class="badge">Mission Profiles</div></div>
+      <div class="use-grid" id="use-grid"></div>
+    </div>
+
+    <!-- ── PRICING ── -->
+    <div class="section-panel" id="tab-pricing">
+      <div class="panel-header"><h1>Unit Pricing</h1><div class="badge">FY2026 Est.</div></div>
+      <div class="price-grid" id="price-grid"></div>
+      <div class="price-disclaimer">
+        ⚠ All pricing figures are publicly reported program unit costs or Congressional Budget Office estimates. Actual procurement costs vary significantly based on lot size, avionics configuration, foreign military sales package, and contract type. Figures are in constant 2026 USD. Sources: GAO, CBO, DSCA.
+      </div>
+    </div>
+
+    <!-- ── CUSTOM ── -->
+    <div class="section-panel" id="tab-custom">
+      <div class="panel-header"><h1>Custom Ranking</h1><div class="badge">Weighted Score</div></div>
+      <div class="custom-grid">
+        <div class="custom-controls">
+          <div class="custom-card">
+            <div class="card-title">Weight Your Priorities</div>
+            <div id="slider-rows"></div>
+          </div>
+          <div class="custom-card">
+            <div class="card-title">Ranked Results</div>
+            <div class="custom-rank-list" id="custom-rank-list"></div>
+          </div>
+        </div>
+        <div class="custom-card" style="align-self:start">
+          <div class="card-title">Top Pick</div>
+          <div class="custom-result">
+            <div class="custom-score-big" id="custom-score-big" style="color:var(--accent)">—</div>
+            <div class="custom-score-label">Weighted Score</div>
+            <div class="custom-winner" id="custom-winner">—</div>
+            <div class="custom-winner-sub" id="custom-winner-sub">Adjust sliders to see ranking</div>
+          </div>
+          <div class="card-title" style="margin-top:16px">Why this pick?</div>
+          <div id="custom-why" style="font-size:11px;color:var(--text2);line-height:1.6"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── COMPARE ── -->
+    <div class="section-panel" id="tab-compare">
+      <div class="panel-header"><h1>Side-by-Side Compare</h1><div class="badge">Select in sidebar</div></div>
+      <div class="compare-header-row">
+        <span class="hint" id="compare-hint">Select 2–6 aircraft from the sidebar, then run comparison.</span>
+      </div>
+      <div id="compare-table-wrap"><div class="no-compare-msg" id="no-compare-msg">Select aircraft in the sidebar and click "Run Comparison"</div></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════
+     THREE.JS CDN
+══════════════════════════════════════════ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ══════════════════════════════════════════
+   DATA
+══════════════════════════════════════════ */
+const AC = [
+  {
+    id:'b2', name:'B-2 Spirit', maker:'Northrop Grumman', year:1997, gen:'5th Gen',
+    color:'#00c8ff', role:'bomber', roleClass:'role-bomber', roleColor:'#e8a830',
+    mach:0.95, ceiling:50000, range:6000, payload:40000, thrust:68400,
+    wingspan:172, length:69, crew:2, rcs:0.001, rcsDb:-30,
+    stealth:true, supercruise:false, stovl:false, nuclear:true, conformalTank:false, thrust_vector:false, aesa:true, irst:false,
+    radar:[88,45,92,62,70,82],
+    tags:['tag-cyan:Stealth','tag-gold:Nuclear-capable','tag-purple:Flying Wing','tag-green:Low RCS'],
+    desc:'The B-2 is the world\'s only operational flying-wing stealth bomber. Its blended airframe and radar-absorbent materials produce an RCS roughly equal to a large bird. A single aircraft can hold at risk targets across an entire theatre.',
+    missions:['Strategic nuclear strike','Conventional precision bombing','Penetrating denied airspace','Global power projection'],
+    theater:'Global — unrefuelled range exceeds 6,000 nm, enabling strike from CONUS to any point on Earth.',
+    price:2100, priceNote:'Per unit FY2021 (total program / 21 aircraft). Most expensive bomber ever built.',
+    features:[
+      {title:'Stealth Signature',body:'RCS ≈ 0.001 m² — effectively invisible to X-band radar below 100 nm.',score:98},
+      {title:'Precision Payload',body:'40,000 lb capacity; 80× Mk82 bombs or 16× B61 nuclear gravity bombs.',score:85},
+      {title:'Range Unrefuelled',body:'6,000+ nm; can deploy from Whiteman AFB to strike anywhere globally.',score:92},
+    ],
+    why:'Best choice when stealth, global reach, and nuclear capability are all top priorities simultaneously.',
+  },
+  {
+    id:'b1b', name:'B-1B Lancer', maker:'Boeing / Rockwell', year:1986, gen:'4th Gen',
+    color:'#e8a830', role:'bomber', roleClass:'role-bomber', roleColor:'#e8a830',
+    mach:1.25, ceiling:60000, range:5500, payload:75000, thrust:120000,
+    wingspan:137, length:146, crew:4, rcs:10, rcsDb:-3,
+    stealth:false, supercruise:false, stovl:false, nuclear:false, conformalTank:false, thrust_vector:false, aesa:false, irst:false,
+    radar:[40,75,85,98,72,65],
+    tags:['tag-gold:Heaviest Payload','tag-purple:Variable Sweep','tag-red:Supersonic','tag-cyan:Conventional'],
+    desc:'The B-1B Lancer carries the largest conventional payload of any US aircraft at 75,000 lb. Variable-sweep wings allow it to dash supersonically at low altitude to penetrate enemy defences before legacy air defence systems can react.',
+    missions:['Heavy conventional strike','Low-level supersonic penetration','Long-range maritime strike','Close air support (JASSM)'],
+    theater:'Intercontinental — forward-deployed to Diego Garcia, Guam, and UK bases for regional power projection.',
+    price:317, priceNote:'FY2026 sustainment unit cost (procurement completed). Original unit cost ~$280M (1985 USD).',
+    features:[
+      {title:'Payload King',body:'75,000 lb across three weapons bays — more than any other US aircraft.',score:99},
+      {title:'Supersonic Sprint',body:'Mach 1.25 dash capability for low-level terrain-following at 200 ft AGL.',score:74},
+      {title:'Versatility',body:'Cleared for 24+ munition types including LRASM, JASSM-ER, and Mk82.',score:88},
+    ],
+    why:'Best choice when maximum conventional payload and long range matter more than stealth.',
+  },
+  {
+    id:'sr71', name:'SR-71 Blackbird', maker:'Lockheed Skunk Works', year:1966, gen:'Cold War Era',
+    color:'#aa80ff', role:'recon', roleClass:'role-recon', roleColor:'#aa80ff',
+    mach:3.32, ceiling:85000, range:2900, payload:0, thrust:68000,
+    wingspan:55, length:107, crew:2, rcs:100, rcsDb:5,
+    stealth:false, supercruise:true, stovl:false, nuclear:false, conformalTank:false, thrust_vector:false, aesa:false, irst:false,
+    radar:[55,100,48,5,100,42],
+    tags:['tag-purple:Mach 3.3+','tag-red:Speed Record','tag-cyan:Titanium Frame','tag-gold:Retired 1998'],
+    desc:'No aircraft has ever matched the SR-71 in sustained level flight. At Mach 3.3+, aerodynamic heating raises the airframe to over 300°C. Its best defence against missiles was simply to accelerate. The Blackbird remains an engineering marvel.',
+    missions:['Strategic reconnaissance','Signals intelligence (SIGINT)','High-speed surveillance','Test & research (post-retirement)'],
+    theater:'Global — typically operated from Beale AFB and deployed to Kadena AB, Japan and RAF Mildenhall, UK.',
+    price:0, priceNote:'Retired 1998. Original unit cost ~$34M (1966 USD) ≈ $307M in 2026 dollars. Museum/archive aircraft only.',
+    features:[
+      {title:'Absolute Speed',body:'Mach 3.32 sustained — outran every missile ever fired at it during service.',score:100},
+      {title:'Ultra-High Altitude',body:'85,000 ft service ceiling. Crew required full pressure suits.',score:100},
+      {title:'Sensor Suite',body:'Advanced SIGINT and optical reconnaissance sensors covering 100,000 sq mi/hr.',score:80},
+    ],
+    why:'Unmatched on pure speed and altitude. Not applicable for combat roles — a reconnaissance icon.',
+  },
+  {
+    id:'f22', name:'F-22 Raptor', maker:'Lockheed Martin', year:2005, gen:'5th Gen',
+    color:'#00e88a', role:'fighter', roleClass:'role-fighter', roleColor:'#00e88a',
+    mach:2.25, ceiling:65000, range:1600, payload:2000, thrust:70000,
+    wingspan:44, length:62, crew:1, rcs:0.0001, rcsDb:-40,
+    stealth:true, supercruise:true, stovl:false, nuclear:false, conformalTank:false, thrust_vector:true, aesa:true, irst:false,
+    radar:[98,92,55,30,88,98],
+    tags:['tag-green:Supercruise','tag-cyan:Thrust Vector','tag-purple:5th Gen','tag-gold:Air Superiority'],
+    desc:'The F-22 is the world\'s premier air-superiority fighter. It supercruises at Mach 1.82 without afterburner, carries weapons in internal bays to preserve its minimal radar cross-section, and uses thrust-vectoring to achieve post-stall manoeuvre angles.',
+    missions:['Air superiority / A2AD penetration','Suppression of enemy air defences (SEAD)','Limited ground attack','Electronic warfare support'],
+    theater:'Pacific/INDOPACOM primary. F-22s are stationed at Langley, Elmendorf, Hickam, and Kadena.',
+    price:143, priceNote:'FY2009 program average unit cost including R&D. ~$67M flyaway for last lot. Production ended 2011.',
+    features:[
+      {title:'Supercruise',body:'Mach 1.82 without afterburner — sustains supersonic flight without fuel-guzzling reheat.',score:95},
+      {title:'Thrust Vectoring',body:'Pitch-axis thrust vectoring enables controllable flight beyond 60° angle of attack.',score:96},
+      {title:'LPI Radar',body:'AN/APG-77 AESA with low probability of intercept — detects without being detected.',score:97},
+    ],
+    why:'Best pick when air-superiority, stealth, and kinematic performance are the top three criteria.',
+  },
+  {
+    id:'f35', name:'F-35 Lightning II', maker:'Lockheed Martin', year:2015, gen:'5th Gen',
+    color:'#ff6b9d', role:'multi', roleClass:'role-multi', roleColor:'#00c8ff',
+    mach:1.6, ceiling:50000, range:1379, payload:18000, thrust:43000,
+    wingspan:35, length:51, crew:1, rcs:0.001, rcsDb:-30,
+    stealth:true, supercruise:false, stovl:true, nuclear:true, conformalTank:false, thrust_vector:false, aesa:true, irst:true,
+    radar:[90,65,60,75,75,72],
+    tags:['tag-cyan:Sensor Fusion','tag-green:STOVL (B)','tag-purple:5th Gen','tag-gold:DAS 360°'],
+    desc:'The F-35 is the world\'s most widely produced 5th-generation aircraft with 1,000+ delivered. Its defining feature is sensor fusion — the AN/ASQ-239 and AN/AAQ-37 Distributed Aperture System give the pilot 360° situational awareness.',
+    missions:['Multirole strike / CAS','Electronic warfare','Forward air control','Naval carrier operations (C)'],
+    theater:'Global — operated by 18+ nations. The backbone of NATO\'s future tactical air power.',
+    price:80, priceNote:'F-35A FY2023 unit cost (Lot 16). F-35B ≈$108M, F-35C ≈$94M. Costs have fallen 70% since initial lots.',
+    features:[
+      {title:'Sensor Fusion',body:'Combines radar, EW, IRST, and DAS into single tactical picture. No other fighter matches it.',score:99},
+      {title:'STOVL Capability',body:'F-35B variant can short-take-off and vertical land — operates from amphibious ships.',score:90},
+      {title:'Network Warfare',body:'MADL datalink enables covert fighter-to-fighter communication within a stealth cell.',score:95},
+    ],
+    why:'Best choice when joint interoperability, sensor fusion, and multirole flexibility are paramount.',
+  },
+  {
+    id:'f15ex', name:'F-15EX Eagle II', maker:'Boeing Defense', year:2021, gen:'4.5th Gen',
+    color:'#ff8844', role:'strike', roleClass:'role-strike', roleColor:'#ff6b6b',
+    mach:2.5, ceiling:65000, range:1700, payload:29500, thrust:58000,
+    wingspan:43, length:64, crew:2, rcs:1000, rcsDb:5,
+    stealth:false, supercruise:false, stovl:false, nuclear:false, conformalTank:true, thrust_vector:false, aesa:true, irst:true,
+    radar:[30,96,65,90,83,80],
+    tags:['tag-gold:Highest Fighter Payload','tag-cyan:EPAWSS EW','tag-red:4.5th Gen','tag-green:Digital Backbone'],
+    desc:'The F-15EX is the most advanced Eagle ever built. With a digital fly-by-wire backbone, EPAWSS electronic warfare suite, conformal fuel tanks, and 29,500 lb payload — the highest of any fighter globally — it can carry the full US munitions inventory.',
+    missions:['Air superiority','Heavy strike / bomb truck','Electronic warfare','Homeland defence QRA'],
+    theater:'Primarily USAF domestic and Europe. Replacing F-15C/D at multiple ANG wings.',
+    price:87, priceNote:'FY2022 unit flyaway cost. Program of record 98 aircraft. Selected over F-35 for specific payload/cost cases.',
+    features:[
+      {title:'Fighter Payload Record',body:'29,500 lb — carries more weapons than any other fighter aircraft on Earth.',score:99},
+      {title:'EPAWSS EW Suite',body:'Eagle Passive/Active Warning Survivability System — full-spectrum jamming and spoofing.',score:88},
+      {title:'Digital Airframe',body:'New digital backbone enables rapid software updates and open-mission-system integration.',score:85},
+    ],
+    why:'Best pick when payload capacity, proven airframe reliability, and cost-effectiveness are prioritised over stealth.',
+  },
+];
+
+const RADAR_AXES = ['Stealth','Speed','Range','Payload','Ceiling','Agility'];
+
+const CUSTOM_WEIGHTS = [
+  {key:'stealth', label:'Stealth / Low Observability', val:50},
+  {key:'speed',   label:'Maximum Speed',               val:50},
+  {key:'range',   label:'Combat Range',                val:50},
+  {key:'payload', label:'Payload Capacity',            val:50},
+  {key:'ceiling', label:'Service Ceiling',             val:50},
+  {key:'agility', label:'Agility / Maneuverability',   val:50},
+];
+
+/* ══════════════════════════════════════════
+   STATE
+══════════════════════════════════════════ */
+let currentAC = AC[0];
+let compareSet = new Set(['b2','f22']);
+
+/* ══════════════════════════════════════════
+   NAV
+══════════════════════════════════════════ */
+function switchTab(tab) {
+  document.querySelectorAll('.nav-tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  document.querySelectorAll('.section-panel').forEach(p=>p.classList.toggle('active', p.id==='tab-'+tab));
+  if(tab==='performance') buildPerformance();
+  if(tab==='features') buildFeatures();
+  if(tab==='purpose') buildPurpose();
+  if(tab==='pricing') buildPricing();
+  if(tab==='custom') buildCustom();
+  if(tab==='compare') buildCompare();
+}
+
+/* ══════════════════════════════════════════
+   SIDEBAR
+══════════════════════════════════════════ */
+function buildSidebar() {
+  const list = document.getElementById('ac-list');
+  list.innerHTML = AC.map(a=>`
+    <div class="ac-item${a.id===currentAC.id?' active':''}" onclick="selectAC('${a.id}')">
+      <div class="ac-dot" style="background:${a.color}"></div>
+      <div class="ac-info">
+        <div class="ac-name">${a.name}</div>
+        <div class="ac-sub">${a.maker}</div>
+      </div>
+      <div class="ac-gen">${a.gen}</div>
+    </div>
+  `).join('');
+
+  const cmpList = document.getElementById('cmp-list');
+  cmpList.innerHTML = AC.map(a=>`
+    <div class="cmp-row" onclick="toggleCompare('${a.id}')">
+      <div class="cmp-dot" style="background:${a.color}"></div>
+      <div class="cmp-label">${a.name}</div>
+      <div class="cmp-check${compareSet.has(a.id)?' on':''}" id="cmp-chk-${a.id}"></div>
+    </div>
+  `).join('');
+}
+
+function selectAC(id) {
+  currentAC = AC.find(a=>a.id===id);
+  buildSidebar();
+  updateOverview();
+  updateThreeModel();
+}
+
+function toggleCompare(id) {
+  if(compareSet.has(id)) { if(compareSet.size>1) compareSet.delete(id); }
+  else if(compareSet.size<6) compareSet.add(id);
+  buildSidebar();
+}
+
+/* ══════════════════════════════════════════
+   OVERVIEW
+══════════════════════════════════════════ */
+function updateOverview() {
+  const a = currentAC;
+  document.getElementById('ov-title').textContent = a.name;
+  document.getElementById('ov-badge').textContent = a.gen;
+  document.getElementById('ov-year').textContent = `IOC ${a.year}`;
+
+  // Metrics
+  const metricsData = [
+    {label:'Max Speed', val:a.mach.toFixed(2), unit:'Mach', pct:a.mach/3.5},
+    {label:'Ceiling', val:a.ceiling.toLocaleString(), unit:'ft', pct:a.ceiling/90000},
+    {label:'Range', val:a.range.toLocaleString(), unit:'nm', pct:a.range/6500},
+    {label:'Payload', val:a.payload.toLocaleString(), unit:'lb', pct:a.payload/80000},
+    {label:'RCS', val:a.rcs>=1?a.rcs.toLocaleString():a.rcs.toString(), unit:'m²', pct:Math.max(0,1-(a.rcsDb+50)/55)},
+  ];
+  document.getElementById('ov-metrics').innerHTML = metricsData.map(m=>`
+    <div class="metric">
+      <div class="metric-label">${m.label}</div>
+      <div class="metric-val" style="color:${a.color}">${m.val}<span class="metric-unit">${m.unit}</span></div>
+      <div class="metric-bar"><div class="metric-bar-fill" style="width:${(m.pct*100).toFixed(1)}%;background:${a.color}"></div></div>
+    </div>
+  `).join('');
+
+  // HUD
+  document.getElementById('hud-title').textContent = a.name.toUpperCase();
+  document.getElementById('hud-mach').style.color = a.color;
+  document.getElementById('hud-mach').textContent = a.mach.toFixed(2);
+  document.getElementById('hud-rcs').textContent = a.rcs>=1?a.rcs.toLocaleString()+'m²':a.rcs+'m²';
+  document.getElementById('hud-ceil').textContent = a.ceiling.toLocaleString();
+
+  // Info card
+  document.getElementById('info-name').style.color = a.color;
+  document.getElementById('info-name').textContent = a.name;
+  document.getElementById('info-maker').textContent = `${a.maker} · ${a.year}`;
+  document.getElementById('info-tags').innerHTML = a.tags.map(t=>{
+    const [cls,lbl]=t.split(':');
+    return `<span class="tag ${cls}">${lbl}</span>`;
+  }).join('');
+  document.getElementById('info-desc').textContent = a.desc;
+
+  // Radar
+  drawRadar(a);
+}
+
+/* ══════════════════════════════════════════
+   RADAR SVG
+══════════════════════════════════════════ */
+function drawRadar(ac) {
+  const svg = document.getElementById('radar-svg');
+  if(!svg) return;
+  svg.innerHTML = '';
+  const cx=120,cy=120,r=88,n=6;
+  const toXY=(i,f)=>{const a=(i/n)*2*Math.PI-Math.PI/2; return [cx+Math.cos(a)*r*f, cy+Math.sin(a)*r*f];};
+
+  // Rings
+  [.25,.5,.75,1].forEach(f=>{
+    const pts = Array.from({length:n},(_,i)=>toXY(i,f).join(',')).join(' ');
+    const p = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+    p.setAttribute('points',pts); p.setAttribute('fill','none');
+    p.setAttribute('stroke',f===1?'#223050':'#1a2540'); p.setAttribute('stroke-width',f===1?'1':'.5');
+    svg.appendChild(p);
+  });
+
+  // Animated scan line
+  const scanLine = document.createElementNS('http://www.w3.org/2000/svg','line');
+  scanLine.setAttribute('x1',cx); scanLine.setAttribute('y1',cy);
+  scanLine.setAttribute('x2',cx+r); scanLine.setAttribute('y2',cy);
+  scanLine.setAttribute('stroke',ac.color); scanLine.setAttribute('stroke-width','1');
+  scanLine.setAttribute('opacity','.5');
+  const anim = document.createElementNS('http://www.w3.org/2000/svg','animateTransform');
+  anim.setAttribute('attributeName','transform'); anim.setAttribute('type','rotate');
+  anim.setAttribute('from',`0 ${cx} ${cy}`); anim.setAttribute('to',`360 ${cx} ${cy}`);
+  anim.setAttribute('dur','4s'); anim.setAttribute('repeatCount','indefinite');
+  scanLine.appendChild(anim);
+  svg.appendChild(scanLine);
+
+  // Axis lines
+  for(let i=0;i<n;i++){
+    const [x,y]=toXY(i,1);
+    const ln=document.createElementNS('http://www.w3.org/2000/svg','line');
+    ln.setAttribute('x1',cx); ln.setAttribute('y1',cy);
+    ln.setAttribute('x2',x); ln.setAttribute('y2',y);
+    ln.setAttribute('stroke','#1a2540'); ln.setAttribute('stroke-width','.5');
+    svg.appendChild(ln);
+  }
+
+  // Data fill
+  const vals = ac.radar.map(v=>v/100);
+  const dataPts = vals.map((v,i)=>toXY(i,v).join(',')).join(' ');
+  const fill = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+  fill.setAttribute('points',dataPts); fill.setAttribute('fill',ac.color);
+  fill.setAttribute('fill-opacity','.15'); fill.setAttribute('stroke',ac.color);
+  fill.setAttribute('stroke-width','1.5');
+  svg.appendChild(fill);
+
+  // Dots
+  vals.forEach((v,i)=>{
+    const [x,y]=toXY(i,v);
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',x); c.setAttribute('cy',y); c.setAttribute('r','3.5');
+    c.setAttribute('fill',ac.color); c.setAttribute('stroke','#060810'); c.setAttribute('stroke-width','1');
+    svg.appendChild(c);
+  });
+
+  // Labels
+  RADAR_AXES.forEach((lbl,i)=>{
+    const [x,y]=toXY(i,1.22);
+    const t=document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x',x); t.setAttribute('y',y);
+    t.setAttribute('text-anchor','middle'); t.setAttribute('dominant-baseline','central');
+    t.setAttribute('font-size','9'); t.setAttribute('fill','#4a6080');
+    t.setAttribute('font-family','system-ui,sans-serif');
+    t.textContent=lbl;
+    svg.appendChild(t);
+  });
+}
+
+/* ══════════════════════════════════════════
+   THREE.JS
+══════════════════════════════════════════ */
+const canvas3d = document.getElementById('three-canvas');
+const renderer = new THREE.WebGLRenderer({canvas:canvas3d, antialias:true, alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setClearColor(0x040608, 1);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(42, 2, 0.1, 500);
+camera.position.set(0, 1.8, 6);
+scene.add(new THREE.AmbientLight(0x334455, 0.9));
+const dl = new THREE.DirectionalLight(0x00c8ff, 1.4); dl.position.set(3,5,4); scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0xe8a830, 0.35); dl2.position.set(-4,1,-3); scene.add(dl2);
+const grid = new THREE.GridHelper(24, 32, 0x0f2030, 0x0a1520); grid.position.y=-1.8; scene.add(grid);
+
+function makeWire(geom, color, opacity=.8){
+  return new THREE.LineSegments(new THREE.WireframeGeometry(geom), new THREE.LineBasicMaterial({color, transparent:true, opacity}));
+}
+function makeShapeWire(shape, color, opacity=.55){
+  return new THREE.LineSegments(new THREE.WireframeGeometry(new THREE.ShapeGeometry(shape)), new THREE.LineBasicMaterial({color, transparent:true, opacity}));
+}
+
+function buildModels(){
+  const models = {};
+
+  // B-2 Spirit — flying wing
+  const b2 = new THREE.Group();
+  const b2s = new THREE.Shape();
+  b2s.moveTo(0,1.4); b2s.lineTo(3.2,-0.6); b2s.lineTo(2.4,-0.9); b2s.lineTo(0.35,-0.4); b2s.lineTo(0,-0.55);
+  b2s.lineTo(-0.35,-0.4); b2s.lineTo(-2.4,-0.9); b2s.lineTo(-3.2,-0.6); b2s.closePath();
+  const b2w = makeShapeWire(b2s, 0x00c8ff, .65); b2w.rotation.x=-Math.PI/2; b2.add(b2w);
+  b2.add(makeWire(new THREE.BoxGeometry(0.45,0.22,2.0), 0x00c8ff, .5));
+  models.b2 = b2;
+
+  // B-1B Lancer — variable sweep
+  const b1 = new THREE.Group();
+  b1.add(makeWire(new THREE.BoxGeometry(0.44,0.34,6.2), 0xe8a830, .7));
+  [-1,1].forEach(s=>{
+    const ws = new THREE.Shape();
+    ws.moveTo(0,0); ws.lineTo(s*2.8,-1.3); ws.lineTo(s*2.5,-2.1); ws.lineTo(s*0.3,-0.6); ws.closePath();
+    const wm = makeShapeWire(ws, 0xe8a830, .55); wm.rotation.x=-Math.PI/2; wm.position.z=0.6; b1.add(wm);
+  });
+  models.b1b = b1;
+
+  // SR-71 — delta chine
+  const sr = new THREE.Group();
+  sr.add(makeWire(new THREE.BoxGeometry(0.32,0.24,7.0), 0xaa80ff, .7));
+  const srs = new THREE.Shape();
+  srs.moveTo(0,3.1); srs.lineTo(2.0,-1.4); srs.lineTo(-2.0,-1.4); srs.closePath();
+  const srw = makeShapeWire(srs, 0xaa80ff, .5); srw.rotation.x=-Math.PI/2; srw.position.z=0.5; sr.add(srw);
+  [-0.85,0.85].forEach(x=>{
+    const eng = makeWire(new THREE.CylinderGeometry(0.24,0.24,3.2,10), 0xaa80ff, .4);
+    eng.rotation.z=Math.PI/2; eng.position.set(x,0,0.5); sr.add(eng);
+  });
+  models.sr71 = sr;
+
+  // F-22 — stealth fighter
+  const f22 = new THREE.Group();
+  f22.add(makeWire(new THREE.BoxGeometry(0.38,0.26,4.0), 0x00e88a, .8));
+  [-1,1].forEach(s=>{
+    const ws = new THREE.Shape();
+    ws.moveTo(0,0); ws.lineTo(s*2.4,-0.7); ws.lineTo(s*2.2,-1.9); ws.lineTo(s*0.2,-0.9); ws.closePath();
+    const wm = makeShapeWire(ws, 0x00e88a, .5); wm.rotation.x=-Math.PI/2; wm.position.z=0.25; f22.add(wm);
+  });
+  [-0.5,0.5].forEach(x=>{
+    const t = makeWire(new THREE.BoxGeometry(0.07,0.78,0.65), 0x00e88a, .45);
+    t.position.set(x,0.42,-1.65); f22.add(t);
+  });
+  models.f22 = f22;
+
+  // F-35 — JSF
+  const f35 = new THREE.Group();
+  f35.add(makeWire(new THREE.BoxGeometry(0.38,0.3,3.3), 0xff6b9d, .8));
+  [-1,1].forEach(s=>{
+    const ws = new THREE.Shape();
+    ws.moveTo(0,0); ws.lineTo(s*1.9,-0.5); ws.lineTo(s*1.7,-1.55); ws.lineTo(s*0.15,-0.65); ws.closePath();
+    const wm = makeShapeWire(ws, 0xff6b9d, .5); wm.rotation.x=-Math.PI/2; wm.position.z=0.2; f35.add(wm);
+  });
+  const t35 = makeWire(new THREE.BoxGeometry(0.07,0.7,0.55), 0xff6b9d, .45); t35.position.set(0,0.38,-1.4); f35.add(t35);
+  models.f35 = f35;
+
+  // F-15EX
+  const f15 = new THREE.Group();
+  f15.add(makeWire(new THREE.BoxGeometry(0.42,0.3,4.2), 0xff8844, .8));
+  [-1,1].forEach(s=>{
+    const ws = new THREE.Shape();
+    ws.moveTo(0,0); ws.lineTo(s*2.2,-0.4); ws.lineTo(s*2.0,-1.7); ws.lineTo(s*0.1,-0.6); ws.closePath();
+    const wm = makeShapeWire(ws, 0xff8844, .5); wm.rotation.x=-Math.PI/2; wm.position.z=0.3; f15.add(wm);
+  });
+  [-0.42,0.42].forEach(x=>{
+    const t = makeWire(new THREE.BoxGeometry(0.07,0.75,0.6), 0xff8844, .45);
+    t.position.set(x,0.42,-1.7); f15.add(t);
+  });
+  models.f15ex = f15;
+
+  return models;
+}
+
+const ALL_MODELS = buildModels();
+const modelGroup = new THREE.Group(); scene.add(modelGroup);
+let currentModel = null;
+
+function updateThreeModel(){
+  if(currentModel) modelGroup.remove(currentModel);
+  currentModel = ALL_MODELS[currentAC.id];
+  if(currentModel) modelGroup.add(currentModel);
+}
+
+// Orbit
+let isDragging=false, prevMx=0, prevMy=0, rotX=0.2, rotY=0;
+canvas3d.addEventListener('mousedown', e=>{isDragging=true; prevMx=e.clientX; prevMy=e.clientY;});
+window.addEventListener('mouseup', ()=>isDragging=false);
+window.addEventListener('mousemove', e=>{
+  if(!isDragging) return;
+  rotY+=(e.clientX-prevMx)*.009; rotX+=(e.clientY-prevMy)*.009;
+  rotX=Math.max(-.7,Math.min(.8,rotX)); prevMx=e.clientX; prevMy=e.clientY;
+});
+canvas3d.addEventListener('wheel', e=>{camera.position.z=Math.max(2.5,Math.min(11,camera.position.z+e.deltaY*.005)); e.preventDefault();},{passive:false});
+let tx=0, ty=0;
+canvas3d.addEventListener('touchstart', e=>{tx=e.touches[0].clientX; ty=e.touches[0].clientY;});
+canvas3d.addEventListener('touchmove', e=>{
+  rotY+=(e.touches[0].clientX-tx)*.01; rotX+=(e.touches[0].clientY-ty)*.01;
+  tx=e.touches[0].clientX; ty=e.touches[0].clientY; e.preventDefault();
+},{passive:false});
+
+function resizeRenderer(){
+  const w=canvas3d.clientWidth, h=canvas3d.clientHeight;
+  renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();
+}
+new ResizeObserver(resizeRenderer).observe(canvas3d); resizeRenderer();
+
+let t3=0;
+(function animate(){
+  requestAnimationFrame(animate);
+  t3+=.012;
+  if(currentModel){
+    currentModel.rotation.y = rotY + t3;
+    currentModel.rotation.x = rotX;
+    currentModel.position.y = Math.sin(t3*.7)*.14;
+  }
+  renderer.render(scene, camera);
+})();
+
+/* ══════════════════════════════════════════
+   PERFORMANCE TAB
+══════════════════════════════════════════ */
+function buildBarChart(containerId, data, maxVal, fmt, color){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  el.innerHTML = data.map(d=>`
+    <div class="bc-row">
+      <div class="bc-label">${d.name}</div>
+      <div class="bc-track"><div class="bc-fill" style="width:${Math.min(100,(d.val/maxVal)*100).toFixed(1)}%;background:${d.color}"></div></div>
+      <div class="bc-val" style="color:${d.color}">${fmt(d.val)}</div>
+    </div>
+  `).join('');
+}
+
+function buildPerformance(){
+  const a = currentAC;
+  // Top metrics
+  const pd=[
+    {label:'Max Mach', val:a.mach.toFixed(2), unit:'', pct:a.mach/3.5},
+    {label:'Ceiling', val:a.ceiling.toLocaleString(), unit:'ft', pct:a.ceiling/90000},
+    {label:'Range', val:a.range.toLocaleString(), unit:'nm', pct:a.range/6500},
+    {label:'Payload', val:a.payload.toLocaleString(), unit:'lb', pct:a.payload/80000},
+  ];
+  document.getElementById('perf-metrics').innerHTML = pd.map(m=>`
+    <div class="metric">
+      <div class="metric-label">${m.label}</div>
+      <div class="metric-val" style="color:${a.color}">${m.val}<span class="metric-unit">${m.unit}</span></div>
+      <div class="metric-bar"><div class="metric-bar-fill" style="width:${(m.pct*100).toFixed(1)}%;background:${a.color}"></div></div>
+    </div>
+  `).join('');
+
+  const allData = idx => AC.map(ac=>({name:ac.name, val:ac[idx], color:ac.color}));
+  buildBarChart('perf-speed-chart', allData('mach').sort((a,b)=>b.val-a.val), 3.5, v=>v.toFixed(2), '');
+  buildBarChart('perf-ceil-chart', allData('ceiling').sort((a,b)=>b.val-a.val), 90000, v=>(v/1000).toFixed(0)+'k', '');
+  buildBarChart('perf-range-chart', allData('range').sort((a,b)=>b.val-a.val), 6500, v=>v.toLocaleString(), '');
+  buildBarChart('perf-payload-chart', allData('payload').sort((a,b)=>b.val-a.val), 80000, v=>v.toLocaleString(), '');
+}
+
+/* ══════════════════════════════════════════
+   FEATURES TAB
+══════════════════════════════════════════ */
+function buildFeatures(){
+  const a = currentAC;
+  // Feature cards for selected aircraft
+  document.getElementById('feat-cards').innerHTML = a.features.map(f=>`
+    <div class="feat-card">
+      <div class="feat-title">${f.title}</div>
+      <div class="feat-body">${f.body}</div>
+      <div class="feat-score">
+        <div class="feat-score-bar"><div class="feat-score-fill" style="width:${f.score}%;background:${a.color}"></div></div>
+        <div class="feat-score-val" style="color:${a.color}">${f.score}/100</div>
+      </div>
+    </div>
+  `).join('');
+
+  // Feature matrix
+  const FEAT_COLS = [
+    {key:'stealth',    label:'Stealth'},
+    {key:'supercruise',label:'Supercruise'},
+    {key:'stovl',      label:'STOVL'},
+    {key:'nuclear',    label:'Nuclear'},
+    {key:'conformalTank',label:'Conf. Tanks'},
+    {key:'thrust_vector',label:'Thrust Vec.'},
+    {key:'aesa',       label:'AESA'},
+    {key:'irst',       label:'IRST'},
+  ];
+  const thead = `<thead><tr><th>Aircraft</th>${FEAT_COLS.map(c=>`<th>${c.label}</th>`).join('')}</tr></thead>`;
+  const tbody = '<tbody>' + AC.map(ac=>`
+    <tr>
+      <td style="color:${ac.color};font-weight:500;white-space:nowrap">${ac.name}</td>
+      ${FEAT_COLS.map(c=>`<td class="val-cell">${ac[c.key]?'<span class="check">✓</span>':'<span class="cross">—</span>'}</td>`).join('')}
+    </tr>
+  `).join('') + '</tbody>';
+  document.getElementById('feat-matrix').innerHTML = thead + tbody;
+}
+
+/* ══════════════════════════════════════════
+   PURPOSE TAB
+══════════════════════════════════════════ */
+function buildPurpose(){
+  document.getElementById('use-grid').innerHTML = AC.map(a=>`
+    <div class="use-card ${a.roleClass}">
+      <div class="use-role" style="color:${a.roleColor}">${a.role.toUpperCase()}</div>
+      <div class="use-name" style="color:${a.color}">${a.name}</div>
+      <div class="use-maker">${a.maker} · IOC ${a.year}</div>
+      <div class="use-missions">
+        ${a.missions.map(m=>`<div class="use-mission"><div class="use-mission-dot" style="background:${a.color}"></div>${m}</div>`).join('')}
+      </div>
+      <div class="use-theater">
+        <div class="use-theater-title">Theater</div>
+        <div class="use-theater-val">${a.theater}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ══════════════════════════════════════════
+   PRICING TAB
+══════════════════════════════════════════ */
+function buildPricing(){
+  const sorted = [...AC].sort((a,b)=>a.price-b.price);
+  const featured = AC.find(a=>a.id==='f35');
+  document.getElementById('price-grid').innerHTML = AC.map(a=>`
+    <div class="price-card${a.id===featured.id?' featured':''}">
+      ${a.id===featured.id?'<div class="price-badge">Lowest Current Cost</div>':''}
+      <div class="price-ac-name" style="color:${a.color}">${a.name}</div>
+      <div class="price-ac-sub">${a.maker}</div>
+      <div class="price-big" style="color:${a.color}">${a.price>0?'$'+a.price.toLocaleString()+'M':'Retired'}</div>
+      <div class="price-note">${a.priceNote}</div>
+      <div class="price-items">
+        <div class="price-item">${a.gen}</div>
+        <div class="price-item">IOC ${a.year}</div>
+        <div class="price-item">${a.crew} crew</div>
+        <div class="price-item">Mach ${a.mach.toFixed(2)}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ══════════════════════════════════════════
+   CUSTOM TAB
+══════════════════════════════════════════ */
+const weights = [...CUSTOM_WEIGHTS];
+
+function buildCustom(){
+  const sliderContainer = document.getElementById('slider-rows');
+  sliderContainer.innerHTML = weights.map((w,i)=>`
+    <div class="slider-row">
+      <div class="slider-label">${w.label} <span id="sw-val-${i}">${w.val}%</span></div>
+      <input type="range" min="0" max="100" value="${w.val}" id="sw-${i}"
+        style="--pct:${w.val}%"
+        oninput="updateWeight(${i},this.value)"/>
+    </div>
+  `).join('');
+  calcCustomRanking();
+}
+
+function updateWeight(i, v){
+  weights[i].val = parseInt(v);
+  document.getElementById('sw-val-'+i).textContent = v+'%';
+  const input = document.getElementById('sw-'+i);
+  input.style.setProperty('--pct', v+'%');
+  calcCustomRanking();
+}
+
+function calcCustomRanking(){
+  const totalWeight = weights.reduce((s,w)=>s+w.val, 0) || 1;
+  const scored = AC.map(a=>{
+    const s = (
+      a.radar[0]*weights[0].val + a.radar[1]*weights[1].val +
+      a.radar[2]*weights[2].val + a.radar[3]*weights[3].val +
+      a.radar[4]*weights[4].val + a.radar[5]*weights[5].val
+    ) / totalWeight;
+    return {a, score:Math.round(s)};
+  }).sort((a,b)=>b.score-a.score);
+
+  const winner = scored[0].a;
+  const wscore = scored[0].score;
+  const scoreEl = document.getElementById('custom-score-big');
+  if(scoreEl){ scoreEl.textContent = wscore; scoreEl.style.color = winner.color; }
+  const wEl = document.getElementById('custom-winner');
+  if(wEl){ wEl.textContent = winner.name; wEl.style.color = winner.color; }
+  const subEl = document.getElementById('custom-winner-sub');
+  if(subEl) subEl.textContent = winner.maker + ' · ' + winner.gen;
+  const whyEl = document.getElementById('custom-why');
+  if(whyEl) whyEl.textContent = winner.why;
+
+  const rankEl = document.getElementById('custom-rank-list');
+  if(rankEl){
+    rankEl.innerHTML = scored.map((s,i)=>`
+      <div class="rank-item">
+        <div class="rank-num">${i+1}</div>
+        <div class="rank-dot" style="background:${s.a.color}"></div>
+        <div class="rank-name">${s.a.name}</div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:${s.score}%;background:${s.a.color}"></div></div>
+        <div class="rank-score" style="color:${s.a.color}">${s.score}</div>
+      </div>
+    `).join('');
+  }
+}
+
+/* ══════════════════════════════════════════
+   COMPARE TAB
+══════════════════════════════════════════ */
+function buildCompare(){
+  const selected = AC.filter(a=>compareSet.has(a.id));
+  document.getElementById('compare-hint').textContent = `Comparing ${selected.length} aircraft`;
+
+  if(selected.length < 2){
+    document.getElementById('compare-table-wrap').innerHTML = '<div class="no-compare-msg">Select at least 2 aircraft in the sidebar, then click "Run Comparison"</div>';
+    return;
+  }
+
+  const ROWS = [
+    {section:'Performance'},
+    {label:'Max Speed', key:'mach', unit:'Mach', fmt:v=>v.toFixed(2), higher:true},
+    {label:'Service Ceiling', key:'ceiling', unit:'ft', fmt:v=>v.toLocaleString(), higher:true},
+    {label:'Combat Range', key:'range', unit:'nm', fmt:v=>v.toLocaleString(), higher:true},
+    {label:'Max Payload', key:'payload', unit:'lb', fmt:v=>v.toLocaleString(), higher:true},
+    {label:'Total Thrust', key:'thrust', unit:'lbf', fmt:v=>v.toLocaleString(), higher:true},
+    {section:'Stealth & Signature'},
+    {label:'RCS', key:'rcs', unit:'m²', fmt:v=>v.toString(), higher:false},
+    {label:'RCS (dBsm)', key:'rcsDb', unit:'dBsm', fmt:v=>v.toString(), higher:false},
+    {section:'Physical'},
+    {label:'Wingspan', key:'wingspan', unit:'ft', fmt:v=>v, higher:false},
+    {label:'Length', key:'length', unit:'ft', fmt:v=>v, higher:false},
+    {label:'Crew', key:'crew', unit:'', fmt:v=>v, higher:false},
+    {section:'Cost'},
+    {label:'Unit Cost', key:'price', unit:'M USD', fmt:v=>v>0?'$'+v+'M':'Retired', higher:false},
+    {section:'Capability Index'},
+    {label:'Stealth Score', key:'r0', unit:'/100', fmt:v=>v, higher:true, radarIdx:0},
+    {label:'Speed Score', key:'r1', unit:'/100', fmt:v=>v, higher:true, radarIdx:1},
+    {label:'Range Score', key:'r2', unit:'/100', fmt:v=>v, higher:true, radarIdx:2},
+    {label:'Payload Score', key:'r3', unit:'/100', fmt:v=>v, higher:true, radarIdx:3},
+    {label:'Ceiling Score', key:'r4', unit:'/100', fmt:v=>v, higher:true, radarIdx:4},
+    {label:'Agility Score', key:'r5', unit:'/100', fmt:v=>v, higher:true, radarIdx:5},
+  ];
+
+  const thCols = selected.map(a=>`
+    <th class="ac-col">
+      <div class="dot-name">
+        <div class="dot" style="background:${a.color}"></div>
+        <span style="color:${a.color}">${a.name.replace(' ','<br>')}</span>
+      </div>
+    </th>
+  `).join('');
+
+  const rows = ROWS.map(row=>{
+    if(row.section) return `<tr class="section-row"><td colspan="${1+selected.length}">${row.section}</td></tr>`;
+    const getVal = (a) => row.radarIdx!==undefined ? a.radar[row.radarIdx] : a[row.key];
+    const vals = selected.map(a=>getVal(a));
+    const best = row.higher ? Math.max(...vals) : Math.min(...vals);
+    const cells = selected.map((a,i)=>{
+      const v = vals[i];
+      const isWinner = v===best;
+      return `<td class="val-cell${isWinner?' winner-cell':''}" style="color:${isWinner?a.color:'var(--text2)'}">${row.fmt(v)}<span style="font-size:9px;color:var(--text3);margin-left:2px">${row.unit}</span></td>`;
+    }).join('');
+    return `<tr><td class="metric-cell">${row.label}</td>${cells}</tr>`;
+  }).join('');
+
+  document.getElementById('compare-table-wrap').innerHTML = `
+    <table class="compare-table">
+      <thead><tr><th>Metric</th>${thCols}</tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <p style="font-size:10px;color:var(--text3);margin-top:10px;padding:0 4px">★ = best in category among selected aircraft</p>
+  `;
+}
+
+/* ══════════════════════════════════════════
+   LIVE DATE
+══════════════════════════════════════════ */
+function updateDate(){
+  document.getElementById('live-date').textContent = new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+setInterval(updateDate, 1000); updateDate();
+
+/* ══════════════════════════════════════════
+   INIT
+══════════════════════════════════════════ */
+buildSidebar();
+updateOverview();
+updateThreeModel();
+</script>
+</body>
+</html>
